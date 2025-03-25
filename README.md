@@ -1,2 +1,2 @@
 # vibe.flow
-Some git alaises and a workflow for vibe coding
+Some git aliases and a workflow for vibe coding
