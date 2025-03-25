@@ -41,9 +41,11 @@ iterations     ← Fast, messy, vibe-coded development zone.
 | Command               | Purpose                                                          |
 | --------------------- | ---------------------------------------------------------------- |
 | `git vibe.push [msg] [--origin]` | Auto-commits changes from `iterations` and snapshots them into `main`. Optional `--origin` pushes to remote. |
-| `git vibe.snapshot`   | Commit the current `iterations` state into `main` (manual)       |
-| `git vibe.pull [src]` | Copy current state from `main` or `feature/X` into `iterations`  |
-| `git vibe.clean`      | Rebase and clean up `iterations` history (backup auto-created)   |
+| `git vibe.snapshot [msg]` | Commit the current `iterations` state into `main` (manual) |
+| `git vibe.pull [branch]` | Copy current state from `main` or specified branch into `iterations` |
+| `git vibe.clean` | Rebase and clean up `iterations` history (backup auto-created) |
+| `git vibe.list` | List all snapshots in `main` branch |
+| `git vibe.restore <hash>` | Restore a specific snapshot to `iterations` branch |
 
 ---
 
@@ -92,7 +94,6 @@ bash vibe.flow.installer.sh
 ```
 
 This will:
-
 - Copy `vibe.init` to `~/bin/` (or create it if needed)
 - Ensure `~/bin` is in your `$PATH`
 - Make `vibe.init` globally available across all your Git projects
@@ -103,7 +104,11 @@ Then, within each project, run:
 vibe.init
 ```
 
-This sets up `.git-tools`, installs the vibe scripts, and registers aliases locally.
+This sets up:
+- Creates `.git-tools` directory with all necessary scripts
+- Configures Git aliases for all vibe commands
+- Creates `iterations` branch if it doesn't exist
+- Optionally adds `.git-tools` to `.gitignore`
 
 ### Windows (Git Bash)
 
@@ -119,7 +124,11 @@ If you're using **Git Bash** on Windows:
 source ~/.bash_profile
 ```
 
-This sets up `.git-tools`, installs the vibe scripts, and registers aliases locally.
+This sets up:
+- Creates `.git-tools` directory with all necessary scripts
+- Configures Git aliases for all vibe commands
+- Creates `iterations` branch if it doesn't exist
+- Optionally adds `.git-tools` to `.gitignore`
 
 ### Requirements
 
