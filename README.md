@@ -1,7 +1,7 @@
 # Vibe-Flow: A Git Workflow for Vibe Coding
 
 <p align="center">
-  <img src="vibe.flow.jpg" alt="Vibe Flow Logo" width="200" style="filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 10px limegreen); background-color: #111; padding: 1em; border-radius: 12px;"/>
+  <img src="vibe.flow.jpg" alt="Vibe Flow Logo" width="200"/>
 </p>
 
 ## 🧭 Table of Contents
@@ -21,9 +21,7 @@
 
 **Vibe-Flow** is more than a Git workflow — it's a mindset for working with large language models. It turns chaotic AI-generated code into reproducible, clean checkpoints without losing the rhythm of creativity. Inspired by jazz, automation, and sane defaults, it lets you guide your repo like a conductor guides an orchestra.
 
-
-
-
+---
 
 ## Branch Philosophy
 
@@ -43,7 +41,7 @@ iterations     ← Fast, messy, vibe-coded development zone.
 | Command               | Purpose                                                          |
 | --------------------- | ---------------------------------------------------------------- |
 | `git vibe.push`       | Snapshot the current state of `iterations` into `main`           |
-| `git vibe.snapshot`   | Like `vibe.push`, but fully manual and decoupled from flow logic |
+| `git vibe.snapshot`   | Commit the current `iterations` state into `main` (manual)       |
 | `git vibe.pull [src]` | Copy current state from `main` or `feature/X` into `iterations`  |
 | `git vibe.clean`      | Rebase and clean up `iterations` history (backup auto-created)   |
 
@@ -123,8 +121,6 @@ source ~/.bash_profile
 
 This sets up `.git-tools`, installs the vibe scripts, and registers aliases locally.
 
-
-
 ### Requirements
 
 - **Git** must be installed and accessible in your shell.
@@ -133,8 +129,6 @@ This sets up `.git-tools`, installs the vibe scripts, and registers aliases loca
   - ✅ Windows users can use [Git Bash](https://gitforwindows.org/) or WSL (Windows Subsystem for Linux).
   - ⚠️ PowerShell is *not* supported — the scripts rely on standard Bash behavior.
 - Make sure your Git config allows custom aliases (`git config --global alias.vibe.push ...`).
-
-
 
 ---
 

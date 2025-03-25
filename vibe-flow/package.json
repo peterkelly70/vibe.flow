@@ -1,0 +1,36 @@
+{
+  "name": "vibe-flow",
+  "displayName": "Vibe-Flow",
+  "description": "Git workflow for vibe coding with AI",
+  "version": "1.0.0",
+  "publisher": "peterkelly70",
+  "engines": {"vscode": "^1.85.0"},
+  "categories": ["SCM Providers"],
+  "activationEvents": ["onCommand:vibe-flow.push"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {"command": "vibe-flow.push", "title": "Vibe: Push Snapshot"},
+      {"command": "vibe-flow.pull", "title": "Vibe: Pull Snapshot"},
+      {"command": "vibe-flow.clean", "title": "Vibe: Clean Iterations"},
+      {"command": "vibe-flow.snapshot", "title": "Vibe: Manual Snapshot"},
+      {"command": "vibe-flow.init", "title": "Vibe: Initialize"}
+    ],
+    "menus": {
+      "scm/sourceControl": [
+        {"command": "vibe-flow.push", "group": "navigation"},
+        {"command": "vibe-flow.pull", "group": "navigation"}
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^18.x",
+    "typescript": "^5.2.2"
+  }
+}
