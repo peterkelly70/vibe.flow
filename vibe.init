@@ -66,7 +66,7 @@ if ! git show-ref --verify --quiet "refs/heads/$SRC_BRANCH"; then
   exit 1
 fi
 
-echo "📥 Pulling snapshot from '$SRC_BRANCH' into '$DEST_BRANCH'..."
+echo "📥 Pulling current state from '$SRC_BRANCH' into '$DEST_BRANCH'..."
 git checkout "$SRC_BRANCH" -- .
 
 echo "✅ Snapshot from '$SRC_BRANCH' applied to '$DEST_BRANCH'."
@@ -104,7 +104,7 @@ EOF
 chmod +x "$TOOLS_DIR/vibe_clean.sh"
 
 ##############################################
-# vibe.snapshot
+# vibe.snapshot (manual push)
 ##############################################
 cat > "$TOOLS_DIR/vibe_snapshot.sh" <<'EOF'
 #!/bin/bash
@@ -149,16 +149,107 @@ EOF
 chmod +x "$TOOLS_DIR/vibe_snapshot.sh"
 
 ##############################################
+# vibe.list — List snapshots from main
+##############################################
+cat > "$TOOLS_DIR/vibe_list.sh" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+MAIN_BRANCH="main"
+
+echo "📜 Snapshots committed to '$MAIN_BRANCH' from 'iterations':"
+echo
+
+git log "$MAIN_BRANCH" --pretty=format:'%h | %ad | %s' --date=short \
+  | grep -E '^[a-f0-9]+ - ' \
+  | sed 's/^/🔹 /'
+EOF
+chmod +x "$TOOLS_DIR/vibe_list.sh"
+
+##############################################
+# vibe.restore — Restore specific snapshot
+##############################################
+cat > "$TOOLS_DIR/vibe_restore.sh" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+DEST_BRANCH="iterations"
+SNAPSHOT_HASH=${1:-}
+
+if [[ -z "$SNAPSHOT_HASH" ]]; then
+  echo "❌ Usage: git vibe.restore <commit-hash>"
+  exit 1
+fi
+
+if ! git cat-file -e "${SNAPSHOT_HASH}^{commit}" 2>/dev/null; then
+  echo "❌ Commit '$SNAPSHOT_HASH' not found."
+  exit 1
+fi
+
+echo "🔁 Restoring snapshot $SNAPSHOT_HASH into '$DEST_BRANCH'..."
+git checkout "$DEST_BRANCH" || { echo "❌ Failed to checkout '$DEST_BRANCH'."; exit 1; }
+git checkout "$SNAPSHOT_HASH" -- .
+
+echo "✅ Snapshot $SNAPSHOT_HASH restored into '$DEST_BRANCH'."
+EOF
+chmod +x "$TOOLS_DIR/vibe_restore.sh"
+
+##############################################
 # Git Aliases
 ##############################################
 git config alias.vibe.push "!bash $TOOLS_DIR/vibe_push.sh"
 git config alias.vibe.pull "!bash $TOOLS_DIR/vibe_pull.sh"
 git config alias.vibe.clean "!bash $TOOLS_DIR/vibe_clean.sh"
 git config alias.vibe.snapshot "!bash $TOOLS_DIR/vibe_snapshot.sh"
+git config alias.vibe.list "!bash $TOOLS_DIR/vibe_list.sh"
+git config alias.vibe.restore "!bash $TOOLS_DIR/vibe_restore.sh"
 
+##############################################
+# Prompt to add .git-tools to .gitignore
+##############################################
+GITIGNORE_FILE=".gitignore"
+
+read -rp "📂 Do you want to add '$TOOLS_DIR' to .gitignore? [y/N]: " response
+response=${response,,}  # lowercase
+
+if [[ "$response" == "y" || "$response" == "yes" ]]; then
+  if [[ -f "$GITIGNORE_FILE" ]]; then
+    if ! grep -qxF "$TOOLS_DIR" "$GITIGNORE_FILE"; then
+      echo "$TOOLS_DIR" >> "$GITIGNORE_FILE"
+      echo "🛡️  '$TOOLS_DIR' added to .gitignore"
+    else
+      echo "ℹ️  '$TOOLS_DIR' is already in .gitignore"
+    fi
+  else
+    echo "$TOOLS_DIR" > "$GITIGNORE_FILE"
+    echo "🛡️  Created .gitignore and added '$TOOLS_DIR'"
+  fi
+else
+  echo "❗ '$TOOLS_DIR' was not added to .gitignore"
+fi
+
+##############################################
+# Ensure 'iterations' branch exists
+##############################################
+if ! git show-ref --verify --quiet "refs/heads/iterations"; then
+  echo -e "\n🌱 'iterations' branch not found. Creating from 'main'..."
+  git checkout -b iterations main || {
+    echo "❌ Failed to create 'iterations' from 'main'. Please check if 'main' exists."
+    exit 1
+  }
+  echo "✅ Created 'iterations' branch."
+else
+  echo "✅ 'iterations' branch already exists."
+fi
+
+##############################################
+# Final message
+##############################################
 echo -e "\n✨ Vibe-Flow tools installed successfully. Use:\n"
-echo "   git vibe.push        - snapshot iterations to main"
-echo "   git vibe.pull [branch] - pull state into iterations"
-echo "   git vibe.clean        - clean up iterations history"
-echo "   git vibe.snapshot     - commit iterations state into main manually"
+echo "   git vibe.push         - snapshot iterations to main"
+echo "   git vibe.pull [branch] - pull latest from a branch into iterations"
+echo "   git vibe.clean         - clean up iterations history"
+echo "   git vibe.snapshot      - commit iterations state into main manually"
+echo "   git vibe.list          - list snapshot commits in main"
+echo "   git vibe.restore <hash> - restore specific snapshot to iterations"
 echo -e "\nHappy vibe coding! 🎶"
