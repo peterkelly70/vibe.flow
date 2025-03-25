@@ -1,4 +1,4 @@
-#!/bin/bash
+k#!/bin/bash
 set -euo pipefail
 
 # Vibe-Flow Initializer Script
@@ -7,6 +7,9 @@ set -euo pipefail
 TOOLS_DIR=".git-tools"
 mkdir -p "$TOOLS_DIR"
 
+##############################################
+# vibe.push
+##############################################
 cat > "$TOOLS_DIR/vibe_push.sh" <<'EOF'
 #!/bin/bash
 set -euo pipefail
@@ -68,6 +71,150 @@ fi
 EOF
 chmod +x "$TOOLS_DIR/vibe_push.sh"
 
+##############################################
+# vibe.pull
+##############################################
+cat > "$TOOLS_DIR/vibe_pull.sh" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+DEST_BRANCH="iterations"
+SRC_BRANCH="${1:-main}"
+
+git checkout "$DEST_BRANCH" || { echo "❌ Could not switch to branch '$DEST_BRANCH'"; exit 1; }
+
+if ! git show-ref --verify --quiet "refs/heads/$SRC_BRANCH"; then
+  echo "❌ Source branch '$SRC_BRANCH' does not exist."
+  exit 1
+fi
+
+echo "📥 Pulling current state from '$SRC_BRANCH' into '$DEST_BRANCH'..."
+git checkout "$SRC_BRANCH" -- .
+
+echo "✅ Snapshot from '$SRC_BRANCH' applied to '$DEST_BRANCH'."
+EOF
+chmod +x "$TOOLS_DIR/vibe_pull.sh"
+
+##############################################
+# vibe.clean
+##############################################
+cat > "$TOOLS_DIR/vibe_clean.sh" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+BRANCH="iterations"
+
+git checkout "$BRANCH"
+if ! git diff-index --quiet HEAD --; then
+  echo "❌ Uncommitted changes in '$BRANCH'. Please commit or stash them before cleaning."
+  exit 1
+fi
+
+timestamp=$(date +%Y%m%d-%H%M)
+backup_branch="$BRANCH-backup-$timestamp"
+git branch "$backup_branch"
+echo "🛡️ Backup created as '$backup_branch'"
+
+echo "📉 Starting interactive root rebase of '$BRANCH'..."
+git rebase -i --root || {
+  echo "❌ Rebase failed. You can restore from '$backup_branch'."
+  exit 1
+}
+
+echo "✅ '$BRANCH' cleaned. Backup: $backup_branch"
+EOF
+chmod +x "$TOOLS_DIR/vibe_clean.sh"
+
+##############################################
+# vibe.snapshot
+##############################################
+cat > "$TOOLS_DIR/vibe_snapshot.sh" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+ITER_BRANCH="iterations"
+MAIN_BRANCH="main"
+
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [[ "$CURRENT_BRANCH" != "$ITER_BRANCH" ]]; then
+  echo "🚫 You must be on the '$ITER_BRANCH' branch to run 'git vibe.snapshot'."
+  echo "💡 Run: git checkout $ITER_BRANCH"
+  exit 1
+fi
+
+if ! git diff-index --quiet HEAD --; then
+  echo "🚫 Uncommitted changes in '$ITER_BRANCH'. Please commit or stash them first."
+  exit 1
+fi
+
+ITER_HASH=$(git rev-parse --short HEAD)
+USER_MSG=${1:-"Snapshot from $ITER_BRANCH"}
+COMMIT_MSG="${ITER_HASH} - ${USER_MSG}"
+
+if ! git show-ref --verify --quiet "refs/heads/$MAIN_BRANCH"; then
+  echo "🚫 Target branch '$MAIN_BRANCH' does not exist."
+  exit 1
+fi
+
+echo "📦 Applying snapshot from '$ITER_BRANCH' to '$MAIN_BRANCH'..."
+git checkout "$MAIN_BRANCH" || {
+  echo "❌ Failed to checkout '$MAIN_BRANCH'."
+  exit 1
+}
+
+git checkout "$ITER_BRANCH" -- .
+git commit -am "$COMMIT_MSG"
+git checkout "$ITER_BRANCH"
+
+echo "✅ Snapshot committed to '$MAIN_BRANCH': $COMMIT_MSG"
+EOF
+chmod +x "$TOOLS_DIR/vibe_snapshot.sh"
+
+##############################################
+# vibe.list
+##############################################
+cat > "$TOOLS_DIR/vibe_list.sh" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+MAIN_BRANCH="main"
+
+echo "📜 Snapshots committed to '$MAIN_BRANCH' from 'iterations':"
+echo
+
+git log "$MAIN_BRANCH" --pretty=format:'%h | %ad | %s' --date=short \
+  | grep -E '^[a-f0-9]+ - ' \
+  | sed 's/^/🔹 /'
+EOF
+chmod +x "$TOOLS_DIR/vibe_list.sh"
+
+##############################################
+# vibe.restore
+##############################################
+cat > "$TOOLS_DIR/vibe_restore.sh" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+DEST_BRANCH="iterations"
+SNAPSHOT_HASH=${1:-}
+
+if [[ -z "$SNAPSHOT_HASH" ]]; then
+  echo "❌ Usage: git vibe.restore <commit-hash>"
+  exit 1
+fi
+
+if ! git cat-file -e "${SNAPSHOT_HASH}^{commit}" 2>/dev/null; then
+  echo "❌ Commit '$SNAPSHOT_HASH' not found."
+  exit 1
+fi
+
+echo "🔁 Restoring snapshot $SNAPSHOT_HASH into '$DEST_BRANCH'..."
+git checkout "$DEST_BRANCH" || { echo "❌ Failed to checkout '$DEST_BRANCH'."; exit 1; }
+git checkout "$SNAPSHOT_HASH" -- .
+
+echo "✅ Snapshot $SNAPSHOT_HASH restored into '$DEST_BRANCH'."
+EOF
+chmod +x "$TOOLS_DIR/vibe_restore.sh"
 
 ##############################################
 # Git Aliases
@@ -78,7 +225,6 @@ git config alias.vibe.clean "!bash $TOOLS_DIR/vibe_clean.sh"
 git config alias.vibe.snapshot "!bash $TOOLS_DIR/vibe_snapshot.sh"
 git config alias.vibe.list "!bash $TOOLS_DIR/vibe_list.sh"
 git config alias.vibe.restore "!bash $TOOLS_DIR/vibe_restore.sh"
-
 
 ##############################################
 # Prompt to add .git-tools to .gitignore
@@ -129,3 +275,4 @@ echo "   git vibe.snapshot [msg]       - commit manually to main"
 echo "   git vibe.list                  - list snapshots in main"
 echo "   git vibe.restore <hash>       - restore a snapshot to iterations"
 echo -e "\nHappy vibe coding! 🎶"
+
