@@ -40,6 +40,7 @@ iterations     ← Fast, messy, vibe-coded development zone.
 
 | Command               | Purpose                                                          |
 | --------------------- | ---------------------------------------------------------------- |
+| `git vibe.iterate [msg]` | Stage, commit, and push changes to `iterations` branch. Default message: "[AI] Iteration update" |
 | `git vibe.push [msg] [--origin]` | Auto-commits changes from `iterations` and snapshots them into `main`. Optional `--origin` pushes to remote. |
 | `git vibe.snapshot [msg]` | Commit the current `iterations` state into `main` (manual) |
 | `git vibe.pull [branch]` | Copy current state from `main` or specified branch into `iterations` |
@@ -156,6 +157,25 @@ To automate this fully:
 
 - Use Windsurf’s settings to define a post-edit command (or wrap your editor launch in a script)
 - Combine it with `git vibe.snapshot` for structured commits that go straight to `main`
+
+### Windsurf Integration Rules
+
+Any Git repository with `.git-tools/vibe.push` is automatically detected as a Vibe-Flow enabled repo. When working in Windsurf:
+
+1. After accepting AI changes, use:
+   ```bash
+   git vibe.iterate
+   ```
+   This will stage, commit, and push all changes to the `iterations` branch.
+
+2. When satisfied with the changes:
+   - Enter `save snapshot` command
+   - You'll be prompted to run `git vibe.push` with appropriate commit messages to save your work to `main`
+
+3. If you're not satisfied:
+   - Enter `restore snapshot` to restore the last snapshot
+
+This workflow ensures your AI-assisted development stays organized while maintaining the ability to experiment freely.
 
 ## .gitignore Recommendation
 

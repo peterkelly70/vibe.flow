@@ -217,6 +217,46 @@ EOF
 chmod +x "$TOOLS_DIR/vibe_restore.sh"
 
 ##############################################
+# vibe.iterate
+##############################################
+cat > "$TOOLS_DIR/vibe_iterate.sh" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+ITER_BRANCH="iterations"
+
+# Check if we're on iterations branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [[ "$CURRENT_BRANCH" != "$ITER_BRANCH" ]]; then
+  echo "❌ You must be on the '$ITER_BRANCH' branch to run 'git vibe.iterate'."
+  echo "💡 Run: git checkout $ITER_BRANCH"
+  exit 1
+fi
+
+# Get commit message from args or use default
+USER_MSG=${1:-"[AI] Iteration update"}
+
+# Stage and commit all changes
+echo "📝 Staging all changes..."
+git add .
+
+# Only commit if there are staged changes
+if ! git diff --cached --quiet; then
+  echo "💾 Committing changes with message: $USER_MSG"
+  git commit -m "$USER_MSG"
+else
+  echo "ℹ️ No changes to commit"
+  exit 0
+fi
+
+# Push to origin
+echo "🚀 Pushing to origin/$ITER_BRANCH..."
+git push origin "$ITER_BRANCH"
+echo "✅ Changes pushed to origin/$ITER_BRANCH"
+EOF
+chmod +x "$TOOLS_DIR/vibe_iterate.sh"
+
+##############################################
 # Git Aliases
 ##############################################
 git config alias.vibe.push "!bash $TOOLS_DIR/vibe_push.sh"
@@ -225,6 +265,7 @@ git config alias.vibe.clean "!bash $TOOLS_DIR/vibe_clean.sh"
 git config alias.vibe.snapshot "!bash $TOOLS_DIR/vibe_snapshot.sh"
 git config alias.vibe.list "!bash $TOOLS_DIR/vibe_list.sh"
 git config alias.vibe.restore "!bash $TOOLS_DIR/vibe_restore.sh"
+git config alias.vibe.iterate "!$TOOLS_DIR/vibe_iterate.sh"
 
 ##############################################
 # Prompt to add .git-tools to .gitignore
@@ -274,5 +315,5 @@ echo "   git vibe.clean                 - clean up iterations history"
 echo "   git vibe.snapshot [msg]       - commit manually to main"
 echo "   git vibe.list                  - list snapshots in main"
 echo "   git vibe.restore <hash>       - restore a snapshot to iterations"
+echo "   git vibe.iterate [msg]        - commit and push changes in iterations"
 echo -e "\nHappy vibe coding! 🎶"
-
