@@ -1,4 +1,4 @@
-k# Vibe-Flow: A Git Workflow for Vibe Coding
+# Vibe-Flow: A Git Workflow for Vibe Coding
 
 <p align="center">
   <img src="vibe.flow.jpg" alt="Vibe Flow Logo" width="200"/>
@@ -38,14 +38,12 @@ iterations     ← Fast, messy, vibe-coded development zone.
 
 ## Git Commands (via Vibe-Flow)
 
-| Command                   | Purpose                                                                 |
-| ------------------------- | ----------------------------------------------------------------------- |
-| `git vibe.push`           | Snapshot the current state of `iterations` into `main`                  |
-| `git vibe.snapshot`       | Commit the current `iterations` state into `main` (manual alternative)  |
-| `git vibe.pull [src]`     | Copy current state from `main` or `feature/X` into `iterations`         |
-| `git vibe.clean`          | Rebase and clean up `iterations` history (backup auto-created)          |
-| `git vibe.list`           | List past snapshot commits made from `iterations` into `main`           |
-| `git vibe.restore <hash>` | Restore a previous snapshot from `main` into `iterations`               |
+| Command               | Purpose                                                          |
+| --------------------- | ---------------------------------------------------------------- |
+| `git vibe.push [msg] [--origin]` | Auto-commits changes from `iterations` and snapshots them into `main`. Optional `--origin` pushes to remote. |
+| `git vibe.snapshot`   | Commit the current `iterations` state into `main` (manual)       |
+| `git vibe.pull [src]` | Copy current state from `main` or `feature/X` into `iterations`  |
+| `git vibe.clean`      | Rebase and clean up `iterations` history (backup auto-created)   |
 
 ---
 
@@ -70,12 +68,6 @@ $ git vibe.clean
 
 # 6. Or manually snapshot when outside the standard flow
 $ git vibe.snapshot "Stable voice routing test"
-
-# 7. List prior snapshots pushed to main
-$ git vibe.list
-
-# 8. Restore a previous snapshot to iterations
-$ git vibe.restore 7cfa12b3
 ```
 
 ---
@@ -158,9 +150,7 @@ To automate this fully:
 
 ## .gitignore Recommendation
 
-During setup, `vibe.init` will ask if you want to exclude the tooling from Git.
-
-If you choose not to, you can still add it manually:
+To avoid tracking the Vibe-Flow tooling in your repo:
 
 ```bash
 # Add to your .gitignore
@@ -230,4 +220,3 @@ Vibe-Flow gives you structure without slowing your flow. Cursor and Windsurf giv
 > "Here I am, brain the size of a planet, and you want me to take a snapshot. Oh joy. Still, it’s better than being stuck in a merge conflict."
 >
 > — Marvin the Paranoid Android
-
