@@ -17,8 +17,8 @@ if ! git diff-index --quiet HEAD --; then
 fi
 
 ITER_HASH=$(git rev-parse --short HEAD)
-USER_MSG=${1:-"Snapshot from $ITER_BRANCH"}
-COMMIT_MSG="${ITER_HASH} - ${USER_MSG}"
+USER_MSG=${1:-"manual snapshot"}
+COMMIT_MSG="Snapshot: $ITER_HASH - $USER_MSG"
 
 if ! git show-ref --verify --quiet "refs/heads/$MAIN_BRANCH"; then
   echo "🚫 Target branch '$MAIN_BRANCH' does not exist."
