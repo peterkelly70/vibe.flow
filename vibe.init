@@ -251,6 +251,63 @@ EOF
 chmod +x "$TOOLS_DIR/vibe_iterate.sh"
 
 ##############################################
+# vibe.switch
+##############################################
+cat > "$TOOLS_DIR/vibe_switch.sh" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+MAIN_BRANCH="main"
+ITER_BRANCH="iterations"
+
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [[ "$CURRENT_BRANCH" == "$MAIN_BRANCH" ]]; then
+  git checkout "$ITER_BRANCH"
+  echo "🔀 Switched from '$MAIN_BRANCH' → '$ITER_BRANCH'"
+elif [[ "$CURRENT_BRANCH" == "$ITER_BRANCH" ]]; then
+  git checkout "$MAIN_BRANCH"
+  echo "🔀 Switched from '$ITER_BRANCH' → '$MAIN_BRANCH'"
+else
+  echo "⚠️  Not on '$MAIN_BRANCH' or '$ITER_BRANCH'."
+  echo "💡 Run: git checkout $ITER_BRANCH or git vibe.switch again from a valid branch."
+  exit 1
+fi
+EOF
+chmod +x "$TOOLS_DIR/vibe_switch.sh"
+
+##############################################
+# vibe.help
+##############################################
+cat > "$TOOLS_DIR/vibe_help.sh" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+echo
+echo "✨ Vibe-Flow: a clean Git workflow for AI-assisted or experimental coding"
+echo
+echo "Main idea:"
+echo "  • Work freely in 'iterations'"
+echo "  • Push clean snapshots to 'main'"
+echo "  • Keep history readable and reversible"
+echo
+echo "Available commands:"
+echo
+echo "  git vibe.push [msg] [--origin]   →  Snapshot iterations to main"
+echo "  git vibe.pull [branch]           →  Pull latest from branch into iterations"
+echo "  git vibe.clean                   →  Clean up iterations history"
+echo "  git vibe.snapshot [msg]          →  Commit manually to main"
+echo "  git vibe.list                    →  List snapshots in main"
+echo "  git vibe.restore <hash>          →  Restore a snapshot to iterations"
+echo "  git vibe.iterate [msg]           →  Commit and push changes in iterations"
+echo "  git vibe.switch                  →  Toggle between main and iterations"
+echo "  git vibe.help                    →  Show this message"
+echo
+echo "🎶 Happy vibe coding!"
+EOF
+chmod +x "$TOOLS_DIR/vibe_help.sh"
+
+##############################################
 # Git Aliases
 ##############################################
 git config alias.vibe.push     "!bash $TOOLS_DIR/vibe_push.sh"
@@ -260,6 +317,8 @@ git config alias.vibe.snapshot "!bash $TOOLS_DIR/vibe_snapshot.sh"
 git config alias.vibe.list     "!bash $TOOLS_DIR/vibe_list.sh"
 git config alias.vibe.restore  "!bash $TOOLS_DIR/vibe_restore.sh"
 git config alias.vibe.iterate  "!bash $TOOLS_DIR/vibe_iterate.sh"
+git config alias.vibe.switch   "!bash $TOOLS_DIR/vibe_switch.sh"
+git config alias.vibe.help     "!bash $TOOLS_DIR/vibe_help.sh"
 
 ##############################################
 # Prompt to add .git-tools to .gitignore
@@ -300,17 +359,6 @@ else
 fi
 
 ##############################################
-# Final message
+# Final help
 ##############################################
-echo
-echo "✨ Vibe-Flow tools installed successfully. Use:"
-echo
-echo "   git vibe.push [msg] [--origin]   →  Snapshot iterations to main"
-echo "   git vibe.pull [branch]           →  Pull latest from branch into iterations"
-echo "   git vibe.clean                   →  Clean up iterations history"
-echo "   git vibe.snapshot [msg]          →  Commit manually to main"
-echo "   git vibe.list                    →  List snapshots in main"
-echo "   git vibe.restore <hash>          →  Restore a snapshot to iterations"
-echo "   git vibe.iterate [msg]           →  Commit and push changes in iterations"
-echo
-echo "🎶 Happy vibe coding!"
+bash "$TOOLS_DIR/vibe_help.sh"
