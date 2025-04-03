@@ -188,7 +188,7 @@ EOF
 chmod +x "$TOOLS_DIR/vibe_list.sh"
 
 ##############################################
-# vibe.restore
+# Updated: vibe.restore
 ##############################################
 cat > "$TOOLS_DIR/vibe_restore.sh" <<'EOF'
 #!/bin/bash
@@ -207,11 +207,29 @@ if ! git cat-file -e "${SNAPSHOT_HASH}^{commit}" 2>/dev/null; then
   exit 1
 fi
 
-echo "🔁 Restoring snapshot $SNAPSHOT_HASH into '$DEST_BRANCH'..."
-git checkout "$DEST_BRANCH" || { echo "❌ Failed to checkout '$DEST_BRANCH'."; exit 1; }
-git checkout "$SNAPSHOT_HASH" -- .
+# Verify that the snapshot commit exists in the main branch.
+if ! git branch --contains "$SNAPSHOT_HASH" | grep -q "main"; then
+  echo "❌ Commit '$SNAPSHOT_HASH' is not found in the main branch."
+  exit 1
+fi
 
-echo "✅ Snapshot $SNAPSHOT_HASH restored into '$DEST_BRANCH'."
+echo "🔁 Replacing '$DEST_BRANCH' branch with snapshot $SNAPSHOT_HASH from main..."
+
+# If currently on the iterations branch, switch to main before deleting it.
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [[ "$CURRENT_BRANCH" == "$DEST_BRANCH" ]]; then
+  git checkout main || { echo "❌ Failed to checkout main branch."; exit 1; }
+fi
+
+# Delete the iterations branch if it exists.
+if git show-ref --verify --quiet "refs/heads/$DEST_BRANCH"; then
+  git branch -D "$DEST_BRANCH" || { echo "❌ Failed to delete branch '$DEST_BRANCH'."; exit 1; }
+fi
+
+# Create a new iterations branch from the snapshot commit.
+git checkout -b "$DEST_BRANCH" "$SNAPSHOT_HASH" || { echo "❌ Failed to create branch '$DEST_BRANCH' from commit '$SNAPSHOT_HASH'."; exit 1; }
+
+echo "✅ '$DEST_BRANCH' branch successfully replaced with snapshot $SNAPSHOT_HASH from main."
 EOF
 chmod +x "$TOOLS_DIR/vibe_restore.sh"
 
