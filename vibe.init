@@ -24,7 +24,8 @@ if [[ "$CURRENT_BRANCH" != "$ITER_BRANCH" ]]; then
   exit 1
 fi
 
-USER_MSG="no message provided"
+# Determine user message and --origin flag
+USER_MSG="Snapshot from $ITER_BRANCH"
 AUTO_PUSH=false
 
 for arg in "$@"; do
@@ -35,16 +36,17 @@ for arg in "$@"; do
   fi
 done
 
+# Stage and commit uncommitted changes if present
 if ! git diff-index --quiet HEAD --; then
   echo "📝 Uncommitted changes detected. Staging and committing automatically..."
   git add .
   ITER_HASH=$(git rev-parse --short HEAD)
-  COMMIT_MSG="Snapshot: $ITER_HASH - $USER_MSG"
+  COMMIT_MSG="$ITER_HASH - $USER_MSG"
   git commit -m "$COMMIT_MSG"
   echo "✅ Changes committed in '$ITER_BRANCH': $COMMIT_MSG"
 else
   ITER_HASH=$(git rev-parse --short HEAD)
-  COMMIT_MSG="Snapshot: $ITER_HASH - $USER_MSG"
+  COMMIT_MSG="$ITER_HASH - $USER_MSG"
 fi
 
 if ! git show-ref --verify --quiet "refs/heads/$MAIN_BRANCH"; then
@@ -111,7 +113,7 @@ fi
 timestamp=$(date +%Y%m%d-%H%M)
 backup_branch="$BRANCH-backup-$timestamp"
 git branch "$backup_branch"
-echo "🛡️  Backup created as '$backup_branch'"
+echo "🛡️ Backup created as '$backup_branch'"
 
 echo "📉 Starting interactive root rebase of '$BRANCH'..."
 git rebase -i --root || {
@@ -146,8 +148,8 @@ if ! git diff-index --quiet HEAD --; then
 fi
 
 ITER_HASH=$(git rev-parse --short HEAD)
-USER_MSG=${1:-"manual snapshot"}
-COMMIT_MSG="Snapshot: $ITER_HASH - $USER_MSG"
+USER_MSG=${1:-"Snapshot from $ITER_BRANCH"}
+COMMIT_MSG="${ITER_HASH} - ${USER_MSG}"
 
 if ! git show-ref --verify --quiet "refs/heads/$MAIN_BRANCH"; then
   echo "🚫 Target branch '$MAIN_BRANCH' does not exist."
@@ -176,19 +178,18 @@ cat > "$TOOLS_DIR/vibe_list.sh" <<'EOF'
 set -euo pipefail
 
 MAIN_BRANCH="main"
-SNAPSHOT_TAG="Snapshot:"
 
 echo "📜 Snapshots committed to '$MAIN_BRANCH' from 'iterations':"
 echo
 
 git log "$MAIN_BRANCH" --pretty=format:'%h | %ad | %s' --date=short \
-  | grep -i "$SNAPSHOT_TAG" \
+  | grep -E '^[a-f0-9]+ - ' \
   | sed 's/^/🔹 /'
 EOF
 chmod +x "$TOOLS_DIR/vibe_list.sh"
 
 ##############################################
-# Updated: vibe.restore
+# vibe.restore
 ##############################################
 cat > "$TOOLS_DIR/vibe_restore.sh" <<'EOF'
 #!/bin/bash
@@ -207,29 +208,11 @@ if ! git cat-file -e "${SNAPSHOT_HASH}^{commit}" 2>/dev/null; then
   exit 1
 fi
 
-# Verify that the snapshot commit exists in the main branch.
-if ! git branch --contains "$SNAPSHOT_HASH" | grep -q "main"; then
-  echo "❌ Commit '$SNAPSHOT_HASH' is not found in the main branch."
-  exit 1
-fi
+echo "🔁 Restoring snapshot $SNAPSHOT_HASH into '$DEST_BRANCH'..."
+git checkout "$DEST_BRANCH" || { echo "❌ Failed to checkout '$DEST_BRANCH'."; exit 1; }
+git checkout "$SNAPSHOT_HASH" -- .
 
-echo "🔁 Replacing '$DEST_BRANCH' branch with snapshot $SNAPSHOT_HASH from main..."
-
-# If currently on the iterations branch, switch to main before deleting it.
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [[ "$CURRENT_BRANCH" == "$DEST_BRANCH" ]]; then
-  git checkout main || { echo "❌ Failed to checkout main branch."; exit 1; }
-fi
-
-# Delete the iterations branch if it exists.
-if git show-ref --verify --quiet "refs/heads/$DEST_BRANCH"; then
-  git branch -D "$DEST_BRANCH" || { echo "❌ Failed to delete branch '$DEST_BRANCH'."; exit 1; }
-fi
-
-# Create a new iterations branch from the snapshot commit.
-git checkout -b "$DEST_BRANCH" "$SNAPSHOT_HASH" || { echo "❌ Failed to create branch '$DEST_BRANCH' from commit '$SNAPSHOT_HASH'."; exit 1; }
-
-echo "✅ '$DEST_BRANCH' branch successfully replaced with snapshot $SNAPSHOT_HASH from main."
+echo "✅ Snapshot $SNAPSHOT_HASH restored into '$DEST_BRANCH'."
 EOF
 chmod +x "$TOOLS_DIR/vibe_restore.sh"
 
@@ -242,6 +225,7 @@ set -euo pipefail
 
 ITER_BRANCH="iterations"
 
+# Check if we're on iterations branch
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 if [[ "$CURRENT_BRANCH" != "$ITER_BRANCH" ]]; then
   echo "❌ You must be on the '$ITER_BRANCH' branch to run 'git vibe.iterate'."
@@ -249,19 +233,23 @@ if [[ "$CURRENT_BRANCH" != "$ITER_BRANCH" ]]; then
   exit 1
 fi
 
+# Get commit message from args or use default
 USER_MSG=${1:-"[AI] Iteration update"}
 
+# Stage and commit all changes
 echo "📝 Staging all changes..."
 git add .
 
+# Only commit if there are staged changes
 if ! git diff --cached --quiet; then
   echo "💾 Committing changes with message: $USER_MSG"
   git commit -m "$USER_MSG"
 else
-  echo "ℹ️  No changes to commit"
+  echo "ℹ️ No changes to commit"
   exit 0
 fi
 
+# Push to origin
 echo "🚀 Pushing to origin/$ITER_BRANCH..."
 git push origin "$ITER_BRANCH"
 echo "✅ Changes pushed to origin/$ITER_BRANCH"
@@ -269,74 +257,15 @@ EOF
 chmod +x "$TOOLS_DIR/vibe_iterate.sh"
 
 ##############################################
-# vibe.switch
-##############################################
-cat > "$TOOLS_DIR/vibe_switch.sh" <<'EOF'
-#!/bin/bash
-set -euo pipefail
-
-MAIN_BRANCH="main"
-ITER_BRANCH="iterations"
-
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-
-if [[ "$CURRENT_BRANCH" == "$MAIN_BRANCH" ]]; then
-  git checkout "$ITER_BRANCH"
-  echo "🔀 Switched from '$MAIN_BRANCH' → '$ITER_BRANCH'"
-elif [[ "$CURRENT_BRANCH" == "$ITER_BRANCH" ]]; then
-  git checkout "$MAIN_BRANCH"
-  echo "🔀 Switched from '$ITER_BRANCH' → '$MAIN_BRANCH'"
-else
-  echo "⚠️  Not on '$MAIN_BRANCH' or '$ITER_BRANCH'."
-  echo "💡 Run: git checkout $ITER_BRANCH or git vibe.switch again from a valid branch."
-  exit 1
-fi
-EOF
-chmod +x "$TOOLS_DIR/vibe_switch.sh"
-
-##############################################
-# vibe.help
-##############################################
-cat > "$TOOLS_DIR/vibe_help.sh" <<'EOF'
-#!/bin/bash
-set -euo pipefail
-
-echo
-echo "✨ Vibe-Flow: a clean Git workflow for AI-assisted or experimental coding"
-echo
-echo "Main idea:"
-echo "  • Work freely in 'iterations'"
-echo "  • Push clean snapshots to 'main'"
-echo "  • Keep history readable and reversible"
-echo
-echo "Available commands:"
-echo
-echo "  git vibe.push [msg] [--origin]   →  Snapshot iterations to main"
-echo "  git vibe.pull [branch]           →  Pull latest from branch into iterations"
-echo "  git vibe.clean                   →  Clean up iterations history"
-echo "  git vibe.snapshot [msg]          →  Commit manually to main"
-echo "  git vibe.list                    →  List snapshots in main"
-echo "  git vibe.restore <hash>          →  Restore a snapshot to iterations"
-echo "  git vibe.iterate [msg]           →  Commit and push changes in iterations"
-echo "  git vibe.switch                  →  Toggle between main and iterations"
-echo "  git vibe.help                    →  Show this message"
-echo
-echo "🎶 Happy vibe coding!"
-EOF
-chmod +x "$TOOLS_DIR/vibe_help.sh"
-
-##############################################
 # Git Aliases
 ##############################################
-git config alias.vibe.push     "!bash $TOOLS_DIR/vibe_push.sh"
-git config alias.vibe.pull     "!bash $TOOLS_DIR/vibe_pull.sh"
-git config alias.vibe.clean    "!bash $TOOLS_DIR/vibe_clean.sh"
+git config alias.vibe.push "!bash $TOOLS_DIR/vibe_push.sh"
+git config alias.vibe.pull "!bash $TOOLS_DIR/vibe_pull.sh"
+git config alias.vibe.clean "!bash $TOOLS_DIR/vibe_clean.sh"
 git config alias.vibe.snapshot "!bash $TOOLS_DIR/vibe_snapshot.sh"
-git config alias.vibe.list     "!bash $TOOLS_DIR/vibe_list.sh"
-git config alias.vibe.restore  "!bash $TOOLS_DIR/vibe_restore.sh"
-git config alias.vibe.iterate  "!bash $TOOLS_DIR/vibe_iterate.sh"
-git config alias.vibe.switch   "!bash $TOOLS_DIR/vibe_switch.sh"
-git config alias.vibe.help     "!bash $TOOLS_DIR/vibe_help.sh"
+git config alias.vibe.list "!bash $TOOLS_DIR/vibe_list.sh"
+git config alias.vibe.restore "!bash $TOOLS_DIR/vibe_restore.sh"
+git config alias.vibe.iterate "!$TOOLS_DIR/vibe_iterate.sh"
 
 ##############################################
 # Prompt to add .git-tools to .gitignore
@@ -377,6 +306,14 @@ else
 fi
 
 ##############################################
-# Final help
+# Final message
 ##############################################
-bash "$TOOLS_DIR/vibe_help.sh"
+echo -e "\n✨ Vibe-Flow tools installed successfully. Use:\n"
+echo "   git vibe.push [msg] [--origin] - snapshot iterations to main"
+echo "   git vibe.pull [branch]         - pull latest from branch into iterations"
+echo "   git vibe.clean                 - clean up iterations history"
+echo "   git vibe.snapshot [msg]       - commit manually to main"
+echo "   git vibe.list                  - list snapshots in main"
+echo "   git vibe.restore <hash>       - restore a snapshot to iterations"
+echo "   git vibe.iterate [msg]        - commit and push changes in iterations"
+echo -e "\nHappy vibe coding! 🎶"

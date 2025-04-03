@@ -12,7 +12,7 @@ fi
 timestamp=$(date +%Y%m%d-%H%M)
 backup_branch="$BRANCH-backup-$timestamp"
 git branch "$backup_branch"
-echo "🛡️  Backup created as '$backup_branch'"
+echo "🛡️ Backup created as '$backup_branch'"
 
 echo "📉 Starting interactive root rebase of '$BRANCH'..."
 git rebase -i --root || {

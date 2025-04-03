@@ -11,7 +11,8 @@ if [[ "$CURRENT_BRANCH" != "$ITER_BRANCH" ]]; then
   exit 1
 fi
 
-USER_MSG="no message provided"
+# Determine user message and --origin flag
+USER_MSG="Snapshot from $ITER_BRANCH"
 AUTO_PUSH=false
 
 for arg in "$@"; do
@@ -22,16 +23,17 @@ for arg in "$@"; do
   fi
 done
 
+# Stage and commit uncommitted changes if present
 if ! git diff-index --quiet HEAD --; then
   echo "📝 Uncommitted changes detected. Staging and committing automatically..."
   git add .
   ITER_HASH=$(git rev-parse --short HEAD)
-  COMMIT_MSG="Snapshot: $ITER_HASH - $USER_MSG"
+  COMMIT_MSG="$ITER_HASH - $USER_MSG"
   git commit -m "$COMMIT_MSG"
   echo "✅ Changes committed in '$ITER_BRANCH': $COMMIT_MSG"
 else
   ITER_HASH=$(git rev-parse --short HEAD)
-  COMMIT_MSG="Snapshot: $ITER_HASH - $USER_MSG"
+  COMMIT_MSG="$ITER_HASH - $USER_MSG"
 fi
 
 if ! git show-ref --verify --quiet "refs/heads/$MAIN_BRANCH"; then
