@@ -41,12 +41,12 @@ if ! git diff-index --quiet HEAD --; then
   echo "📝 Uncommitted changes detected. Staging and committing automatically..."
   git add .
   ITER_HASH=$(git rev-parse --short HEAD)
-  COMMIT_MSG="$ITER_HASH - $USER_MSG"
+  COMMIT_MSG="Snapshot: $ITER_HASH - $USER_MSG"
   git commit -m "$COMMIT_MSG"
   echo "✅ Changes committed in '$ITER_BRANCH': $COMMIT_MSG"
 else
   ITER_HASH=$(git rev-parse --short HEAD)
-  COMMIT_MSG="$ITER_HASH - $USER_MSG"
+  COMMIT_MSG="Snapshot: $ITER_HASH - $USER_MSG"
 fi
 
 if ! git show-ref --verify --quiet "refs/heads/$MAIN_BRANCH"; then
@@ -57,7 +57,8 @@ fi
 echo "📦 Applying snapshot from '$ITER_BRANCH' to '$MAIN_BRANCH'..."
 git checkout "$MAIN_BRANCH"
 git checkout "$ITER_BRANCH" -- .
-git commit -am "$COMMIT_MSG"
+# Force a commit even if there is no diff
+git commit -am "$COMMIT_MSG" --allow-empty
 git checkout "$ITER_BRANCH"
 
 echo "✅ Snapshot pushed to '$MAIN_BRANCH':"
@@ -183,7 +184,7 @@ echo "📜 Snapshots committed to '$MAIN_BRANCH' from 'iterations':"
 echo
 
 git log "$MAIN_BRANCH" --pretty=format:'%h | %ad | %s' --date=short \
-  | grep -E '^[a-f0-9]+ - ' \
+  | grep -i "Snapshot:" \
   | sed 's/^/🔹 /'
 EOF
 chmod +x "$TOOLS_DIR/vibe_list.sh"
@@ -312,8 +313,8 @@ echo -e "\n✨ Vibe-Flow tools installed successfully. Use:\n"
 echo "   git vibe.push [msg] [--origin] - snapshot iterations to main"
 echo "   git vibe.pull [branch]         - pull latest from branch into iterations"
 echo "   git vibe.clean                 - clean up iterations history"
-echo "   git vibe.snapshot [msg]       - commit manually to main"
+echo "   git vibe.snapshot [msg]        - commit manually to main"
 echo "   git vibe.list                  - list snapshots in main"
-echo "   git vibe.restore <hash>       - restore a snapshot to iterations"
-echo "   git vibe.iterate [msg]        - commit and push changes in iterations"
+echo "   git vibe.restore <hash>        - restore a snapshot to iterations"
+echo "   git vibe.iterate [msg]         - commit and push changes in iterations"
 echo -e "\nHappy vibe coding! 🎶"
